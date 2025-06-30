@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกม XO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* กำหนดรูปแบบพื้นฐานสำหรับ HTML และ body */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5; /* สีพื้นหลังอ่อนๆ */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+            flex-direction: column;
+        }
+
+        /* รูปแบบคอนเทนเนอร์หลักของเกม */
+        .game-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* หัวข้อเกม */
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* พื้นที่แสดงสถานะเกม */
+        .game-status {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            font-weight: bold;
+            color: #34495e;
+            min-height: 1.5em; /* ป้องกันการกระโดดของเลย์เอาต์ */
+        }
+
+        /* ตารางเกม XO */
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px); /* 3 คอลัมน์ แต่ละคอลัมน์กว้าง 100px */
+            grid-template-rows: repeat(3, 100px);    /* 3 แถว แต่ละแถวสูง 100px */
+            gap: 10px; /* ระยะห่างระหว่างช่อง */
+            margin-bottom: 30px;
+            background-color: #ecf0f1; /* สีพื้นหลังของบอร์ด */
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ช่องแต่ละช่องในบอร์ด */
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #e0e6ed; /* สีพื้นหลังของช่อง */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            user-select: none; /* ป้องกันการเลือกข้อความ */
+            color: #2c3e50;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        }
+
+        /* เอฟเฟกต์เมื่อวางเมาส์เหนือช่อง */
+        .cell:not(.disabled):hover {
+            background-color: #d1dae6; /* สีที่เข้มขึ้นเมื่อโฮเวอร์ */
+            transform: scale(1.02);
+        }
+
+        /* รูปแบบสำหรับช่องที่ถูกเลือก (X หรือ O) */
+        .cell.X {
+            color: #e74c3c; /* สีแดงสำหรับ X */
+        }
+
+        .cell.O {
+            color: #3498db; /* สีน้ำเงินสำหรับ O */
+        }
+
+        /* รูปแบบสำหรับช่องที่ถูกปิดใช้งาน (ไม่สามารถคลิกได้อีก) */
+        .cell.disabled {
+            cursor: not-allowed;
+            opacity: 0.9;
+        }
+
+        /* ปุ่มรีเซ็ตเกม */
+        .reset-button {
+            background: linear-gradient(145deg, #2ecc71, #27ae60); /* ไล่ระดับสีเขียว */
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            margin-top: 20px; /* เพิ่มระยะห่างด้านบน */
+        }
+
+        /* เอฟเฟกต์เมื่อวางเมาส์เหนือปุ่มรีเซ็ต */
+        .reset-button:hover {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(46, 204, 113, 0.6);
+        }
+
+        /* เอฟเฟกต์เมื่อคลิกปุ่มรีเซ็ต */
+        .reset-button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(46, 204, 113, 0.3);
+        }
+
+        /* ส่วนควบคุมเกม (โหมดและระดับความยาก) */
+        .game-controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .game-mode, .bot-difficulty {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .game-mode label, .bot-difficulty label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .radio-group, .select-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .radio-group div {
+            display: flex;
+            align-items: center;
+        }
+
+        .bot-difficulty select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            background-color: #fff;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .bot-difficulty select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        /* การปรับแต่งสำหรับหน้าจอขนาดเล็ก (มือถือ) */
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .game-status {
+                font-size: 1.2em;
+                margin-bottom: 20px;
+            }
+
+            .game-board {
+                grid-template-columns: repeat(3, 80px); /* ลดขนาดช่องสำหรับมือถือ */
+                grid-template-rows: repeat(3, 80px);
+                gap: 8px;
+            }
+
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 3em;
+            }
+
+            .reset-button {
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+
+            .game-mode, .bot-difficulty {
+                padding: 10px;
+            }
+
+            .radio-group, .select-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>เกม XO</h1>
+
+        <div class="game-controls">
+            <div class="game-mode">
+                <label>โหมดเกม:</label>
+                <div class="radio-group">
+                    <div>
+                        <input type="radio" id="pvpMode" name="gameMode" value="pvp" checked>
+                        <label for="pvpMode">ผู้เล่น vs ผู้เล่น</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="pvcMode" name="gameMode" value="pvc">
+                        <label for="pvcMode">ผู้เล่น vs บอท</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bot-difficulty" id="botDifficultyControl">
+                <label for="difficulty">ระดับความยากของบอท:</label>
+                <div class="select-group">
+                    <select id="difficulty">
+                        <option value="easy">ง่าย</option>
+                        <option value="medium">ปานกลาง</option>
+                        <option value="hard">ยาก</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-status" id="gameStatus">ผู้เล่น X เริ่มต้น</div>
+        <div class="game-board" id="gameBoard">
+            <!-- ช่องเกมจะถูกสร้างด้วย JavaScript -->
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button class="reset-button" id="resetButton">เริ่มเกมใหม่</button>
+    </div>
+
+    <script>
+        // รับอ้างอิงถึงองค์ประกอบ HTML
+        const gameBoard = document.getElementById('gameBoard');
+        const gameStatus = document.getElementById('gameStatus');
+        const resetButton = document.getElementById('resetButton');
+        const cells = document.querySelectorAll('.cell'); // เลือกช่องทั้งหมด
+        const pvpMode = document.getElementById('pvpMode');
+        const pvcMode = document.getElementById('pvcMode');
+        const difficultySelect = document.getElementById('difficulty');
+        const botDifficultyControl = document.getElementById('botDifficultyControl');
+
+        // ตัวแปรสถานะเกม
+        let board = ['', '', '', '', '', '', '', '', '']; // อาร์เรย์แทนบอร์ดเกม
+        let currentPlayer = 'X'; // ผู้เล่นปัจจุบัน (เริ่มต้นด้วย X)
+        let gameActive = true; // สถานะเกม (true = กำลังเล่น, false = จบเกม)
+        let gameMode = 'pvp'; // โหมดเกม: 'pvp' (Player vs Player) หรือ 'pvc' (Player vs Computer)
+        let botDifficulty = 'easy'; // ระดับความยากของบอท: 'easy', 'medium', 'hard'
+
+        // เงื่อนไขการชนะที่เป็นไปได้ (ดัชนีของช่องที่ชนะ)
+        const winningConditions = [
+            [0, 1, 2], // แนวนอน
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6], // แนวตั้ง
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8], // แนวทแยง
+            [2, 4, 6]
+        ];
+
+        // ฟังก์ชันสำหรับจัดการการคลิกที่ช่อง
+        function handleCellClick(event) {
+            const clickedCell = event.target;
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            // ตรวจสอบว่าเกมยังคงทำงานอยู่หรือไม่ หรือช่องนั้นถูกเลือกไปแล้วหรือไม่
+            // หรือถ้าเป็นโหมดผู้เล่น vs บอท และเป็นตาของบอท ก็ไม่ให้ผู้เล่นคลิก
+            if (board[clickedCellIndex] !== '' || !gameActive || (gameMode === 'pvc' && currentPlayer === 'O')) {
+                return; // ออกจากฟังก์ชันถ้าช่องถูกเลือกไปแล้ว เกมจบแล้ว หรือเป็นตาของบอท
+            }
+
+            // ทำการย้ายของผู้เล่น
+            makeMove(clickedCellIndex, currentPlayer);
+        }
+
+        // ฟังก์ชันสำหรับทำการย้าย (ทั้งผู้เล่นและบอท)
+        function makeMove(index, player) {
+            board[index] = player;
+            cells[index].textContent = player;
+            cells[index].classList.add(player); // เพิ่มคลาสสำหรับสี
+
+            // ตรวจสอบเงื่อนไขการชนะหรือเสมอ
+            if (checkGameResult()) {
+                return; // ถ้าเกมจบแล้ว ไม่ต้องทำอะไรต่อ
+            }
+
+            // ถ้าเกมยังไม่จบ ให้สลับผู้เล่น
+            switchPlayer();
+
+            // ถ้าเป็นโหมดผู้เล่น vs บอท และเป็นตาของบอท ให้บอทเดิน
+            if (gameMode === 'pvc' && currentPlayer === 'O' && gameActive) {
+                setTimeout(botMove, 700); // หน่วงเวลาเล็กน้อยเพื่อให้ดูเป็นธรรมชาติ
+            }
+        }
+
+        // ฟังก์ชันสำหรับตรวจสอบผลลัพธ์ของเกม (ชนะหรือเสมอ)
+        function checkGameResult() {
+            let roundWon = false;
+            for (let i = 0; i < winningConditions.length; i++) {
+                const winCondition = winningConditions[i];
+                let a = board[winCondition[0]];
+                let b = board[winCondition[1]];
+                let c = board[winCondition[2]];
+
+                // ถ้าช่องใดช่องหนึ่งว่างเปล่า ให้ข้ามไป
+                if (a === '' || b === '' || c === '') {
+                    continue;
+                }
+                // ถ้าทั้งสามช่องเหมือนกัน แสดงว่าชนะ
+                if (a === b && b === c) {
+                    roundWon = true;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                gameStatus.textContent = `ผู้เล่น ${currentPlayer} ชนะ! 🎉`;
+                gameActive = false; // หยุดเกม
+                disableCells(); // ปิดใช้งานช่องทั้งหมด
+                return true; // เกมจบแล้ว
+            }
+
+            // ตรวจสอบว่าเสมอหรือไม่ (ถ้าไม่มีช่องว่างเหลืออยู่และยังไม่มีใครชนะ)
+            let roundDraw = !board.includes('');
+            if (roundDraw) {
+                gameStatus.textContent = 'เสมอ! 🤝';
+                gameActive = false; // หยุดเกม
+                return true; // เกมจบแล้ว
+            }
+            return false; // เกมยังไม่จบ
+        }
+
+        // ฟังก์ชันสำหรับสลับผู้เล่น
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            gameStatus.textContent = `ตาของ ${currentPlayer}`;
+        }
+
+        // ฟังก์ชันสำหรับปิดใช้งานช่องทั้งหมดเมื่อเกมจบ
+        function disableCells() {
+            cells.forEach(cell => {
+                cell.classList.add('disabled');
+                cell.removeEventListener('click', handleCellClick); // ลบ event listener
+            });
+        }
+
+        // ฟังก์ชันสำหรับรีเซ็ตเกม
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', '']; // ล้างบอร์ด
+            currentPlayer = 'X'; // ตั้งผู้เล่นเริ่มต้นเป็น X
+            gameActive = true; // ตั้งสถานะเกมเป็นกำลังเล่น
+            gameStatus.textContent = 'ผู้เล่น X เริ่มต้น'; // อัปเดตสถานะ
+
+            // ล้างเนื้อหาและคลาสจากช่องทั้งหมด
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('X', 'O', 'disabled');
+                cell.addEventListener('click', handleCellClick); // เพิ่ม event listener กลับเข้าไป
+            });
+
+            // ถ้าเป็นโหมดผู้เล่น vs บอท และบอทเป็นผู้เล่นคนแรก ให้บอทเดิน
+            if (gameMode === 'pvc' && currentPlayer === 'O') {
+                setTimeout(botMove, 700);
+            }
+        }
+
+        // ฟังก์ชันสำหรับให้บอทเดิน
+        function botMove() {
+            if (!gameActive) return; // ตรวจสอบว่าเกมยังคงทำงานอยู่
+
+            let move;
+            switch (botDifficulty) {
+                case 'easy':
+                    move = getEasyMove();
+                    break;
+                case 'medium':
+                    move = getMediumMove();
+                    break;
+                case 'hard':
+                    move = getHardMove();
+                    break;
+            }
+
+            if (move !== undefined) {
+                makeMove(move, 'O');
+            }
+        }
+
+        // AI ระดับง่าย: สุ่มเลือกช่องที่ว่าง
+        function getEasyMove() {
+            const availableCells = [];
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') {
+                    availableCells.push(i);
+                }
+            }
+            const randomIndex = Math.floor(Math.random() * availableCells.length);
+            return availableCells[randomIndex];
+        }
+
+        // AI ระดับปานกลาง: พยายามชนะ, บล็อกผู้เล่น, หรือสุ่ม
+        function getMediumMove() {
+            const botPlayer = 'O';
+            const humanPlayer = 'X';
+
+            // 1. ตรวจสอบว่าบอทสามารถชนะได้หรือไม่
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                const line = [board[a], board[b], board[c]];
+
+                // ถ้าบอทมี 2 ตัวในแถวและมีช่องว่าง 1 ช่อง
+                if (line.filter(cell => cell === botPlayer).length === 2 && line.includes('')) {
+                    const emptyIndex = winningConditions[i][line.indexOf('')];
+                    if (board[emptyIndex] === '') return emptyIndex;
+                }
+            }
+
+            // 2. ตรวจสอบว่าผู้เล่นสามารถชนะได้หรือไม่ และบล็อก
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                const line = [board[a], board[b], board[c]];
+
+                // ถ้าผู้เล่นมี 2 ตัวในแถวและมีช่องว่าง 1 ช่อง
+                if (line.filter(cell => cell === humanPlayer).length === 2 && line.includes('')) {
+                    const emptyIndex = winningConditions[i][line.indexOf('')];
+                    if (board[emptyIndex] === '') return emptyIndex;
+                }
+            }
+
+            // 3. ถ้าไม่มีโอกาสชนะหรือบล็อก ให้สุ่มเลือกช่องที่ว่าง
+            return getEasyMove();
+        }
+
+        // AI ระดับยาก: พยายามชนะ, บล็อกผู้เล่น, เน้นช่องกลาง/มุม
+        function getHardMove() {
+            const botPlayer = 'O';
+            const humanPlayer = 'X';
+
+            // 1. ตรวจสอบว่าบอทสามารถชนะได้หรือไม่
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                const line = [board[a], board[b], board[c]];
+
+                if (line.filter(cell => cell === botPlayer).length === 2 && line.includes('')) {
+                    const emptyIndex = winningConditions[i][line.indexOf('')];
+                    if (board[emptyIndex] === '') return emptyIndex;
+                }
+            }
+
+            // 2. ตรวจสอบว่าผู้เล่นสามารถชนะได้หรือไม่ และบล็อก
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                const line = [board[a], board[b], board[c]];
+
+                if (line.filter(cell => cell === humanPlayer).length === 2 && line.includes('')) {
+                    const emptyIndex = winningConditions[i][line.indexOf('')];
+                    if (board[emptyIndex] === '') return emptyIndex;
+                }
+            }
+
+            // 3. ถ้าช่องกลางว่าง ให้เลือกช่องกลาง
+            if (board[4] === '') {
+                return 4;
+            }
+
+            // 4. ถ้ามุมว่าง ให้เลือกมุมใดมุมหนึ่ง
+            const corners = [0, 2, 6, 8];
+            const availableCorners = corners.filter(index => board[index] === '');
+            if (availableCorners.length > 0) {
+                return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+            }
+
+            // 5. ถ้าขอบว่าง ให้เลือกขอบใดขอบหนึ่ง
+            const edges = [1, 3, 5, 7];
+            const availableEdges = edges.filter(index => board[index] === '');
+            if (availableEdges.length > 0) {
+                return availableEdges[Math.floor(Math.random() * availableEdges.length)];
+            }
+
+            // Fallback: สุ่มเลือกช่องที่ว่าง (ไม่น่าจะเกิดขึ้นถ้ามีช่องว่าง)
+            return getEasyMove();
+        }
+
+
+        // ฟังก์ชันสำหรับจัดการการเปลี่ยนโหมดเกม
+        function handleGameModeChange() {
+            gameMode = document.querySelector('input[name="gameMode"]:checked').value;
+            if (gameMode === 'pvc') {
+                botDifficultyControl.style.display = 'flex'; // แสดงตัวเลือกความยาก
+            } else {
+                botDifficultyControl.style.display = 'none'; // ซ่อนตัวเลือกความยาก
+            }
+            resetGame(); // รีเซ็ตเกมเมื่อเปลี่ยนโหมด
+        }
+
+        // ฟังก์ชันสำหรับจัดการการเปลี่ยนระดับความยากของบอท
+        function handleDifficultyChange() {
+            botDifficulty = difficultySelect.value;
+            resetGame(); // รีเซ็ตเกมเมื่อเปลี่ยนความยาก
+        }
+
+        // เพิ่ม event listeners เมื่อโหลดหน้าเว็บเสร็จ
+        window.onload = function() {
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+            resetButton.addEventListener('click', resetGame);
+
+            pvpMode.addEventListener('change', handleGameModeChange);
+            pvcMode.addEventListener('change', handleGameModeChange);
+            difficultySelect.addEventListener('change', handleDifficultyChange);
+
+            // ซ่อนตัวเลือกความยากของบอทเริ่มต้น
+            botDifficultyControl.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
